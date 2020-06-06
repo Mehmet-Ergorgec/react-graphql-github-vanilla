@@ -9,12 +9,21 @@ const axiosGitHubGraphQL = axios.create({
     Authorization: `bearer ${process.env.REACT_APP_GITHUB_PERSONAL_ACCESS_TOKEN}`,
   },
 });
+
+const GET_ORGANIZATION = `
+{
+organization(login: "the-road-to-learn-react") {
+  name
+  url
+  }
+}`;
 class App extends Component {
   state = {
     path: 'the-road-to-learn-react/the-road-to-learn-react',
   };
 
   componentDidMount() {
+    this.onFetchFromGitHub();
     // fetch data
   }
 
@@ -26,6 +35,10 @@ class App extends Component {
     // fetch data
 
     event.preventDefault();
+  };
+
+  onFetchFromGitHub = () => {
+    axiosGitHubGraphQL.post('', { query: GET_ORGANIZATION }).then((result) => console.log(result));
   };
 
   render() {
@@ -48,8 +61,6 @@ class App extends Component {
         </form>
 
         <hr />
-
-        {/* Here comes the result! */}
       </div>
     );
   }
