@@ -9,6 +9,7 @@ import {
   addStarToRepository,
   removeStarRepository,
 } from './query/stars';
+import { addReactionToIssue } from './query/reactions';
 
 const TITLE = 'React GraphQL GitHub Client';
 
@@ -21,7 +22,7 @@ export const axiosGitHubGraphQL = axios.create({
 
 class App extends Component {
   state = {
-    path: 'the-road-to-learn-react/the-road-to-learn-react',
+    path: 'the-road-to-learn-react/the-road-to-react',
     organization: null,
     errors: null,
   };
@@ -62,6 +63,10 @@ class App extends Component {
     }
   };
 
+  onReactionIssue = (issueId, emoji) => {
+    addReactionToIssue(issueId, emoji);
+  };
+
   render() {
     const { path, organization, errors } = this.state;
 
@@ -89,6 +94,7 @@ class App extends Component {
             errors={errors}
             onFetchMoreIssues={this.onFetchMoreIssues}
             onStarRepository={this.onStarRepository}
+            onReactionIssue={this.onReactionIssue}
           />
         ) : (
           <p>No information yet ...</p>

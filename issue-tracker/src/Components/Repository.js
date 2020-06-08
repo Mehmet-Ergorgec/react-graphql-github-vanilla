@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Repository = ({ repository, onFetchMoreIssues, onStarRepository }) => (
+const Repository = ({ repository, onFetchMoreIssues, onStarRepository, onReactionIssue }) => (
   <div>
     <p>
       <strong>Repository:</strong>
@@ -23,7 +23,14 @@ const Repository = ({ repository, onFetchMoreIssues, onStarRepository }) => (
           <a href={issue.node.url}>{issue.node.title}</a>
           <ul>
             {issue.node.reactions.edges.map((reaction) => (
-              <li key={reaction.node.id}>{reaction.node.content}</li>
+              <li
+                key={reaction.node.id}
+                onClick={() =>
+                  onReactionIssue(issue.node.id, (reaction.node.content = 'THUMBS_UP'))
+                }
+              >
+                {reaction.node.content}
+              </li>
             ))}
           </ul>
         </li>
