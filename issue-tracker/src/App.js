@@ -63,7 +63,7 @@ const resolveIssuesQuery = (queryResult, cursor) => (state) => {
       errors,
     };
   }
-  const { edges: oldIssues } = state.organization.repository.issues;
+  const { edges: oldIssues } = state.organization.repository.issues; // oldIssues -- > JS destructuring alias
   const { edges: newIssues } = data.organization.repository.issues;
   const updatedIssues = [...oldIssues, ...newIssues];
   return {
