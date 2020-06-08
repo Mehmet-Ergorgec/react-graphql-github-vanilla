@@ -1,160 +1,23 @@
 import React, { Component } from 'react';
+import Organization from './Components/Organization';
 import axios from 'axios';
+
+import { getIssuesOfRepository, resolveIssuesQuery } from './query/issues';
+import {
+  resolveAddStarMutation,
+  resolveRemoveStarMutation,
+  addStarToRepository,
+  removeStarRepository,
+} from './query/stars';
 
 const TITLE = 'React GraphQL GitHub Client';
 
-const axiosGitHubGraphQL = axios.create({
+export const axiosGitHubGraphQL = axios.create({
   baseURL: 'https://api.github.com/graphql',
   headers: {
     Authorization: `bearer ${process.env.REACT_APP_GITHUB_PERSONAL_ACCESS_TOKEN}`,
   },
 });
-
-const GET_ISSUES_OF_REPOSITORY = `
-  query ($organization: String!, $repository: String!, $cursor: String) {
-    organization(login: $organization) {
-      avatarUrl(size: 40)
-      name
-      url
-      repository(name: $repository) {
-        id
-        name
-        url
-        stargazers {
-          totalCount
-        }
-        viewerHasStarred
-        description
-        issues(first: 5, after: $cursor,states: [OPEN]) {
-          edges {
-            node {
-              id
-              title
-              url
-              reactions(last: 3) {
-                edges {
-                  node {
-                    id
-                    content
-                  }
-                }
-              }
-            }
-          }
-          totalCount
-          pageInfo {
-            endCursor
-            hasNextPage
-          }
-        }
-      }
-    }
-  }
-`;
-
-const ADD_STAR = `
-  mutation ($repositoryId: ID!) {
-    addStar(input:{starrableId:$repositoryId}) {
-      starrable {
-        viewerHasStarred
-      }
-    }
-  }
-`;
-
-const REMOVE_STAR = `
-  mutation ($repositoryId: ID!) {
-    removeStar(input:{starrableId:$repositoryId}) {
-      starrable {
-        viewerHasStarred
-      }
-    }
-  }
-`;
-
-const getIssuesOfRepository = (path, cursor) => {
-  const [organization, repository] = path.split('/');
-  return axiosGitHubGraphQL.post('', {
-    query: GET_ISSUES_OF_REPOSITORY,
-    variables: { organization, repository, cursor },
-  });
-};
-
-const resolveIssuesQuery = (queryResult, cursor) => (state) => {
-  const { data, errors } = queryResult.data;
-  if (!cursor) {
-    return {
-      organization: data.organization,
-      errors,
-    };
-  }
-  const { edges: oldIssues } = state.organization.repository.issues; // oldIssues -- > JS destructuring alias
-  const { edges: newIssues } = data.organization.repository.issues;
-  const updatedIssues = [...oldIssues, ...newIssues];
-  return {
-    organization: {
-      ...data.organization,
-      repository: {
-        ...data.organization.repository,
-        issues: {
-          ...data.organization.repository.issues,
-          edges: updatedIssues,
-        },
-      },
-    },
-    errors,
-  };
-};
-
-const resolveAddStarMutation = (mutationResult) => (state) => {
-  const { viewerHasStarred } = mutationResult.data.data.addStar.starrable;
-  const { totalCount } = state.organization.repository.stargazers;
-  return {
-    ...state,
-    organization: {
-      ...state.organization,
-      repository: {
-        ...state.organization.repository,
-        viewerHasStarred,
-        stargazers: {
-          totalCount: totalCount + 1,
-        },
-      },
-    },
-  };
-};
-
-const resolveRemoveStarMutation = (mutationResult) => (state) => {
-  const { viewerHasStarred } = mutationResult.data.data.removeStar.starrable;
-  const { totalCount } = state.organization.repository.stargazers;
-  return {
-    ...state,
-    organization: {
-      ...state.organization,
-      repository: {
-        ...state.organization.repository,
-        viewerHasStarred,
-        stargazers: {
-          totalCount: totalCount - 1,
-        },
-      },
-    },
-  };
-};
-
-const addStarToRepository = (repositoryId) => {
-  return axiosGitHubGraphQL.post('', {
-    query: ADD_STAR,
-    variables: { repositoryId },
-  });
-};
-
-const removeStarRepository = (repositoryId) => {
-  return axiosGitHubGraphQL.post('', {
-    query: REMOVE_STAR,
-    variables: { repositoryId },
-  });
-};
 
 class App extends Component {
   state = {
@@ -234,63 +97,5 @@ class App extends Component {
     );
   }
 }
-
-const Organization = ({ organization, errors, onFetchMoreIssues, onStarRepository }) => {
-  if (errors) {
-    return (
-      <p>
-        <strong>Something went wrong:</strong>
-        {errors.map((error) => error.message).join(' ')}
-      </p>
-    );
-  }
-  return (
-    <div>
-      <div>
-        <img src={organization.avatarUrl} />
-        <strong>Issues from </strong>
-        <a href={organization.url}>{organization.name}</a>
-      </div>
-      <Repository
-        repository={organization.repository}
-        onFetchMoreIssues={onFetchMoreIssues}
-        onStarRepository={onStarRepository}
-      />
-    </div>
-  );
-};
-
-const Repository = ({ repository, onFetchMoreIssues, onStarRepository }) => (
-  <div>
-    <p>
-      <strong>Repository:</strong>
-      <p>Description: {repository.description}</p>
-      <p>
-        Name: <a href={repository.url}>{repository.name}</a>
-      </p>
-    </p>
-    <p>Total Open Issues: {repository.issues.totalCount}</p>
-    <button
-      type='button'
-      onClick={() => onStarRepository(repository.id, repository.viewerHasStarred)}
-    >
-      {repository.stargazers.totalCount} {repository.viewerHasStarred ? 'Unstar' : 'Star'}
-    </button>
-
-    <ul>
-      {repository.issues.edges.map((issue) => (
-        <li key={issue.node.id}>
-          <a href={issue.node.url}>{issue.node.title}</a>
-          <ul>
-            {issue.node.reactions.edges.map((reaction) => (
-              <li key={reaction.node.id}>{reaction.node.content}</li>
-            ))}
-          </ul>
-        </li>
-      ))}
-    </ul>
-    {repository.issues.pageInfo.hasNextPage && <button onClick={onFetchMoreIssues}>More</button>}
-  </div>
-);
 
 export default App;
